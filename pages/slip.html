@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Slip Pengiriman Troli - Cover Bottom</title>
+  <link rel="stylesheet" href="../assets/css/cb.css">
+  <script src="../assets/js/nav.js"></script>
+  <style id="pagestyle"></style>
+  <style>
+    /* Layar: latar gelap seperti halaman lain. Kertas (.a4 dan .label) tetap putih karena untuk dicetak. */
+    body {
+      background: #1a1a1a;
+      color: #000;
+      margin: 0;
+    }
+
+    .ctl {
+      background: #000;
+      color: #fff;
+      padding: .8rem 1rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: .8rem 1.4rem;
+      align-items: center;
+      border-bottom: 1px solid #333;
+    }
+
+    .ctl .slipid {
+      font-size: 1.4rem;
+      font-weight: bold;
+    }
+
+    .ctl label {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      margin: 0;
+      color: #fff;
+      font-size: 1rem;
+    }
+
+    .ctl select,
+    .ctl input {
+      width: auto;
+      font-size: 1rem;
+      padding: .4rem .5rem;
+      background: #000;
+      color: #fff;
+      border: 2px solid #555;
+    }
+
+    .ctl input[type=number] {
+      width: 5rem;
+    }
+
+    .ctl button.go {
+      font-size: 1.2rem;
+      padding: .5rem 1.6rem;
+    }
+
+    .ctl a {
+      color: var(--link);
+    }
+
+    .ctl a:hover {
+      color: #fff;
+      text-decoration: underline;
+    }
+
+    .ctl .sp {
+      flex: 1;
+    }
+
+    #err {
+      padding: 1rem 1.2rem;
+      color: #fff;
+      background: #d40000;
+      font-size: 1.2rem;
+      font-weight: bold;
+      display: none;
+    }
+
+    #pages {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    /* ---------- A4 ---------- */
+    .a4 {
+      background: #fff;
+      width: 210mm;
+      min-height: 297mm;
+      padding: 10mm;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
+    }
+
+    .a4 .head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 2px solid #000;
+      padding-bottom: 4mm;
+      margin-bottom: 4mm;
+    }
+
+    .a4 h1 {
+      font-size: 15pt;
+      margin: 0 0 2mm;
+    }
+
+    .a4 .meta {
+      font-size: 10pt;
+      line-height: 1.5;
+    }
+
+    .a4 .slipno {
+      text-align: right;
+    }
+
+    .a4 .slipno .no {
+      font-size: 17pt;
+      font-weight: bold;
+      letter-spacing: .5px;
+    }
+
+    .a4 .wo {
+      border: 1px solid #000;
+      margin-bottom: 5mm;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    .a4 .wohead {
+      background: #e6e6e6;
+      padding: 2mm 3mm;
+      font-size: 10.5pt;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5mm;
+      border-bottom: 1px solid #000;
+    }
+
+    .a4 table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9.5pt;
+    }
+
+    .a4 th {
+      background: #f3f3f3;
+      text-align: left;
+      padding: 1.5mm 2mm;
+      border-bottom: 1px solid #000;
+    }
+
+    .a4 td {
+      padding: 1.6mm 2mm;
+      border-bottom: 1px solid #bbb;
+      vertical-align: top;
+    }
+
+    .a4 td.r,
+    .a4 th.r {
+      text-align: right;
+    }
+
+    .a4 td.box {
+      border-left: 1px solid #000;
+      width: 28mm;
+    }
+
+    .a4 td.chk {
+      width: 9mm;
+      text-align: center;
+    }
+
+    .a4 .chkbox {
+      display: inline-block;
+      width: 4mm;
+      height: 4mm;
+      border: 1px solid #000;
+    }
+
+    .a4 .sig {
+      display: flex;
+      gap: 10mm;
+      margin-top: 8mm;
+      font-size: 10pt;
+      break-inside: avoid;
+    }
+
+    .a4 .sig div {
+      flex: 1;
+      border-top: 1px solid #000;
+      padding-top: 1.5mm;
+      text-align: center;
+      margin-top: 14mm;
+    }
+
+    .a4 .foot {
+      font-size: 8.5pt;
+      color: #333;
+      margin-top: 4mm;
+    }
+
+    /* ---------- A5 landscape (varian dari A4: kelas .a4 .a5l, font lebih kecil) ---------- */
+    .a4.a5l {
+      width: 210mm;
+      min-height: 148mm;
+      padding: 8mm;
+    }
+
+    .a4.a5l .head {
+      padding-bottom: 2.5mm;
+      margin-bottom: 3mm;
+    }
+
+    .a4.a5l h1 {
+      font-size: 12pt;
+      margin-bottom: 1mm;
+    }
+
+    .a4.a5l .meta {
+      font-size: 8.5pt;
+      line-height: 1.35;
+    }
+
+    .a4.a5l .slipno .no {
+      font-size: 13pt;
+    }
+
+    .a4.a5l .wo {
+      margin-bottom: 3mm;
+    }
+
+    .a4.a5l .wohead {
+      padding: 1.2mm 2mm;
+      font-size: 9pt;
+      gap: 3mm;
+    }
+
+    .a4.a5l table {
+      font-size: 8pt;
+    }
+
+    .a4.a5l th {
+      padding: .8mm 1.5mm;
+    }
+
+    .a4.a5l td {
+      padding: .9mm 1.5mm;
+    }
+
+    .a4.a5l td.box {
+      width: 24mm;
+    }
+
+    .a4.a5l .sig {
+      margin-top: 3mm;
+      font-size: 8.5pt;
+      gap: 8mm;
+    }
+
+    .a4.a5l .sig div {
+      margin-top: 9mm;
+    }
+
+    .a4.a5l .foot {
+      font-size: 7pt;
+      margin-top: 2mm;
+    }
+
+    /* ---------- Label Zebra ---------- */
+    .label {
+      background: #fff;
+      overflow: hidden;
+      padding: 3mm;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
+    }
+
+    .label .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 8pt;
+      font-weight: bold;
+    }
+
+    .label .bc {
+      text-align: center;
+      margin: 1mm 0;
+    }
+
+    .label .bcno {
+      text-align: center;
+      font-size: 10pt;
+      font-weight: bold;
+      letter-spacing: .4px;
+    }
+
+    .label .wo {
+      font-size: 13pt;
+      font-weight: bold;
+      margin-top: 1.5mm;
+      border-top: 1.5px solid #000;
+      padding-top: 1mm;
+    }
+
+    .label .part {
+      font-size: 8.5pt;
+      line-height: 1.2;
+    }
+
+    .label .tagc {
+      display: inline-block;
+      border: 1.5px solid #000;
+      padding: 0 2mm;
+      font-size: 8.5pt;
+      font-weight: bold;
+      margin-left: 2mm;
+    }
+
+    .label table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 7pt;
+      margin-top: 1mm;
+    }
+
+    .label th {
+      text-align: left;
+      border-bottom: 1px solid #000;
+      padding: .3mm .6mm;
+      font-size: 6.5pt;
+    }
+
+    .label td {
+      padding: .4mm .6mm;
+      border-bottom: .5px solid #888;
+      vertical-align: top;
+      line-height: 1.15;
+    }
+
+    .label td.r,
+    .label th.r {
+      text-align: right;
+    }
+
+    .label td.box {
+      border-left: 1px solid #000;
+      width: 13mm;
+    }
+
+    .label .lfoot {
+      font-size: 6.5pt;
+      margin-top: 1mm;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* Label kecil (mis. 80x80): semua dipadatkan */
+    .label.sm {
+      padding: 2.5mm;
+    }
+
+    .label.sm .top {
+      font-size: 7pt;
+    }
+
+    .label.sm .bc {
+      margin: .5mm 0;
+    }
+
+    .label.sm .bcno {
+      font-size: 8pt;
+    }
+
+    .label.sm .wo {
+      font-size: 11pt;
+      margin-top: 1mm;
+      padding-top: .6mm;
+    }
+
+    .label.sm .tagc {
+      font-size: 7pt;
+      padding: 0 1.5mm;
+    }
+
+    .label.sm .part {
+      font-size: 7pt;
+      line-height: 1.15;
+    }
+
+    .label.sm table {
+      font-size: 6.5pt;
+      margin-top: .6mm;
+    }
+
+    .label.sm th {
+      font-size: 6pt;
+    }
+
+    .label.sm td {
+      padding: .3mm .5mm;
+      line-height: 1.1;
+    }
+
+    .label.sm td.box {
+      width: 11mm;
+    }
+
+    .label.sm .lfoot {
+      font-size: 6pt;
+      margin-top: .6mm;
+    }
+
+    @media print {
+      body {
+        background: #fff;
+      }
+
+      .ctl {
+        display: none;
+      }
+
+      #pages {
+        padding: 0;
+        gap: 0;
+        display: block;
+      }
+
+      .a4,
+      .a4.a5l {
+        box-shadow: none;
+        width: auto;
+        min-height: 0;
+        padding: 0;
+      }
+
+      .label {
+        box-shadow: none;
+        page-break-after: always;
+        break-after: page;
+      }
+
+      .label:last-child {
+        page-break-after: auto;
+        break-after: auto;
+      }
+    }
+  </style>
+</head>
+
+<body class="out">
+  <div class="ctl">
+    <span class="slipid" id="slipno">Slip ...</span>
+    <label>Jenis kertas
+      <select id="layout">
+        <option value="a4">Kertas A4 (printer laser)</option>
+        <option value="a5l">Kertas A5 landscape (printer biasa)</option>
+        <option value="zebra">Label Zebra (satu label per WO)</option>
+      </select>
+    </label>
+    <span id="sizebox" style="display:none">Ukuran label
+      <input type="number" id="lw" value="80" min="40" max="220"> x <input type="number" id="lh" value="80" min="40"
+        max="300"> mm
+    </span>
+    <span class="sp"></span>
+    <a href="scan.html?mode=out">&larr; Kembali ke kirim troli</a>
+    <button class="go" id="btnPrint" type="button">Cetak slip</button>
+  </div>
+  <div id="err"></div>
+  <div id="pages"></div>
+
+  <script>
+    (function () {
+      // ---------------- Code 128 (set B) ----------------
+      var PAT = ['212222', '222122', '222221', '121223', '121322', '131222', '122213', '122312', '132212', '221213',
+        '221312', '231212', '112232', '122132', '122231', '113222', '123122', '123221', '223211', '221132',
+        '221231', '213212', '223112', '312131', '311222', '321122', '321221', '312212', '322112', '322211',
+        '212123', '212321', '232121', '111323', '131123', '131321', '112313', '132113', '132311', '211313',
+        '231113', '231311', '112133', '112331', '132131', '113123', '113321', '133121', '313121', '211331',
+        '231131', '213113', '213311', '213131', '311123', '311321', '331121', '312113', '312311', '332111',
+        '314111', '221411', '431111', '111224', '111422', '121124', '121421', '141122', '141221', '112214',
+        '112412', '122114', '122411', '142112', '142211', '241211', '221114', '413111', '241112', '134111',
+        '111242', '121142', '121241', '114212', '124112', '124211', '411212', '421112', '421211', '212141',
+        '214121', '412121', '111143', '111341', '131141', '114113', '114311', '411113', '411311', '113141',
+        '114131', '311141', '411131', '211412', '211214', '211232', '2331112'];
+
+      function code128Values(text) {
+        var v = [104], sum = 104, i, c;
+        for (i = 0; i < text.length; i++) {
+          c = text.charCodeAt(i) - 32;
+          if (c < 0 || c > 95) { throw new Error('Karakter tidak didukung untuk barcode: ' + text.charAt(i)); }
+          v.push(c);
+          sum += c * (i + 1);
+        }
+        v.push(sum % 103);
+        v.push(106);
+        return v;
+      }
+
+      // Menghasilkan elemen SVG barcode. moduleMm = lebar satu modul (mm), heightMm = tinggi batang.
+      function barcodeSvg(text, moduleMm, heightMm, maxWidthMm) {
+        var vals = code128Values(text), bars = [], x = 10, k, j, w, isBar;
+        for (k = 0; k < vals.length; k++) {
+          var p = PAT[vals[k]];
+          isBar = true;
+          for (j = 0; j < p.length; j++) {
+            w = parseInt(p.charAt(j), 10);
+            if (isBar) { bars.push([x, w]); }
+            x += w;
+            isBar = !isBar;
+          }
+        }
+        var total = x + 10;
+        if (maxWidthMm && total * moduleMm > maxWidthMm) { moduleMm = maxWidthMm / total; }
+        var ns = 'http://www.w3.org/2000/svg';
+        var svg = document.createElementNS(ns, 'svg');
+        svg.setAttribute('viewBox', '0 0 ' + total + ' 10');
+        svg.setAttribute('preserveAspectRatio', 'none');
+        svg.setAttribute('width', (total * moduleMm) + 'mm');
+        svg.setAttribute('height', heightMm + 'mm');
+        svg.setAttribute('shape-rendering', 'crispEdges');
+        var bg = document.createElementNS(ns, 'rect');
+        bg.setAttribute('x', 0); bg.setAttribute('y', 0); bg.setAttribute('width', total); bg.setAttribute('height', 10); bg.setAttribute('fill', '#fff');
+        svg.appendChild(bg);
+        bars.forEach(function (b) {
+          var r = document.createElementNS(ns, 'rect');
+          r.setAttribute('x', b[0]); r.setAttribute('y', 0); r.setAttribute('width', b[1]); r.setAttribute('height', 10); r.setAttribute('fill', '#000');
+          svg.appendChild(r);
+        });
+        return svg;
+      }
+
+      // ---------------- util ----------------
+      var qs = new URLSearchParams(location.search);
+      var ID = parseInt(qs.get('id') || '0', 10);
+      var AUTOPRINT = qs.get('print') === '1';
+      var MOCK = qs.has('mock');
+      var data = null;
+
+      function $(id) { return document.getElementById(id); }
+      function el(tag, cls, text) {
+        var e = document.createElement(tag);
+        if (cls) { e.className = cls; }
+        if (text !== undefined && text !== null) { e.textContent = text; }
+        return e;
+      }
+      function fmt(n) { return Number(n).toLocaleString('en-US', { maximumFractionDigits: 3 }); }
+      function showErr(t) { $('err').style.display = 'block'; $('err').textContent = t; }
+
+      function td(text, cls) { return el('td', cls || '', text); }
+
+      // ---------------- layout A4 ----------------
+      function renderA4(a5) {
+        var pg = el('div', a5 ? 'a4 a5l' : 'a4');
+        var head = el('div', 'head');
+        var left = el('div');
+        left.appendChild(el('h1', '', 'SLIP PENGIRIMAN MATERIAL - COVER BOTTOM'));
+        var meta = el('div', 'meta');
+        var tl = el('div', '', 'Line: ' + (data.line || '-') + '    |    No. troli: ');
+        tl.appendChild(el('b', '', data.trolley === '-' ? '-' : data.trolley));
+        meta.appendChild(tl);
+        meta.appendChild(el('div', '', 'Keluar (OUT): ' + data.outDt + '    |    Petugas gudang: ' + data.outBy));
+        meta.appendChild(el('div', '', 'Jumlah WO di troli: ' + data.wos.length));
+        left.appendChild(meta);
+        head.appendChild(left);
+        var right = el('div', 'slipno');
+        right.appendChild(barcodeSvg(data.slip, a5 ? 0.34 : 0.42, a5 ? 11 : 14));
+        right.appendChild(el('div', 'no', data.slip));
+        head.appendChild(right);
+        pg.appendChild(head);
+
+        data.wos.forEach(function (w) {
+          var box = el('div', 'wo');
+          var wh = el('div', 'wohead');
+          wh.appendChild(el('b', '', 'WO ' + w.wo));
+          wh.appendChild(el('span', '', 'Part ' + w.partNo + (w.partNm ? ' (' + w.partNm + ')' : '')));
+          wh.appendChild(el('span', '', 'Plan ' + fmt(w.plan)));
+          wh.appendChild(el('span', '', 'Rev ' + w.rev));
+          wh.appendChild(el('b', '', w.complete ? '[X] LENGKAP (troli terakhir)' : '[ ] SEBAGIAN'));
+          box.appendChild(wh);
+          var t = el('table');
+          var hr = el('tr');
+          [['No', ''], ['Child Part', ''], ['Nama / Spec', ''], ['Unit', ''], ['Kebutuhan WO', 'r'], ['Ada', 'chk'], ['Dikirim (tulis)', '']].forEach(function (c) {
+            hr.appendChild(el('th', c[1] === 'r' ? 'r' : '', c[0]));
+          });
+          t.appendChild(hr);
+          if (!w.items.length) {
+            var er = el('tr'); var ec = td('Isi supply list tidak ditemukan.'); ec.colSpan = 7; er.appendChild(ec); t.appendChild(er);
+          }
+          w.items.forEach(function (it, i) {
+            var tr = el('tr');
+            tr.appendChild(td(String(i + 1)));
+            tr.appendChild(td(it.partNo));
+            var nc = el('td'); nc.appendChild(el('div', '', it.partNm)); if (it.spec && it.spec !== '-') { var sp = el('div', '', it.spec); sp.style.fontSize = '8pt'; sp.style.color = '#444'; nc.appendChild(sp); }
+            tr.appendChild(nc);
+            tr.appendChild(td(it.unit));
+            tr.appendChild(td(fmt(it.need), 'r'));
+            var cc = el('td', 'chk'); cc.appendChild(el('span', 'chkbox')); tr.appendChild(cc);
+            tr.appendChild(td('', 'box'));
+            t.appendChild(tr);
+          });
+          box.appendChild(t);
+          pg.appendChild(box);
+        });
+
+        var sig = el('div', 'sig');
+        sig.appendChild(el('div', '', 'Petugas gudang (' + data.outBy + ')'));
+        sig.appendChild(el('div', '', 'Penerima di line'));
+        pg.appendChild(sig);
+        pg.appendChild(el('div', 'foot', 'Scan barcode ' + data.slip + ' di halaman Terima troli saat troli sampai di line. Dicetak ' + data.printedAt +
+          '. Kebutuhan adalah kebutuhan seluruh WO; jika satu WO dikirim dengan beberapa troli, tulis jumlah yang dikirim di kolom Dikirim.'));
+        $('pages').appendChild(pg);
+      }
+
+      // ---------------- layout Zebra: satu label per WO (otomatis sambung ke label berikutnya kalau item tidak muat) ----------------
+      function zebraLabel(w, wmm, hmm, small) {
+        var lb = el('div', small ? 'label sm' : 'label');
+        lb.style.width = wmm + 'mm';
+        lb.style.height = hmm + 'mm';
+        var top = el('div', 'top');
+        top.appendChild(el('span', '', 'COVER BOTTOM ' + (data.line || '') + (data.trolley !== '-' ? ' | TROLI ' + data.trolley : '')));
+        var cnt = el('span', 'cnt', '');
+        top.appendChild(cnt);
+        lb.appendChild(top);
+        var bc = el('div', 'bc');
+        bc.appendChild(small ? barcodeSvg(data.slip, 0.33, 9, wmm - 5) : barcodeSvg(data.slip, 0.375, 13, wmm - 6));
+        lb.appendChild(bc);
+        lb.appendChild(el('div', 'bcno', data.slip));
+        var wo = el('div', 'wo', w.wo);
+        wo.appendChild(el('span', 'tagc', w.complete ? 'LENGKAP' : 'SEBAGIAN'));
+        lb.appendChild(wo);
+        lb.appendChild(el('div', 'part', w.partNo + (w.partNm ? ' ' + w.partNm : '') + ' | Plan ' + fmt(w.plan) + ' | Rev ' + w.rev));
+        var t = el('table');
+        var hr = el('tr');
+        [['Child Part', ''], ['Nama', ''], ['Kebutuhan', 'r'], ['Dikirim', '']].forEach(function (c) { hr.appendChild(el('th', c[1], c[0])); });
+        t.appendChild(hr);
+        lb.appendChild(t);
+        var f = el('div', 'lfoot');
+        f.appendChild(el('span', '', data.outDt));
+        f.appendChild(el('span', '', 'Petugas ' + data.outBy));
+        lb.appendChild(f);
+        $('pages').appendChild(lb);
+        return { lb: lb, t: t, cnt: cnt };
+      }
+
+      function zebraRow(it) {
+        var tr = el('tr');
+        tr.appendChild(td(it.partNo));
+        tr.appendChild(td(it.partNm.length > 22 ? it.partNm.substring(0, 22) : it.partNm));
+        tr.appendChild(td(fmt(it.need) + ' ' + it.unit, 'r'));
+        tr.appendChild(td('', 'box'));
+        return tr;
+      }
+
+      function renderZebra(wmm, hmm) {
+        var small = Math.min(wmm, hmm) <= 90;
+        var all = [];
+        data.wos.forEach(function (w) {
+          var cur = zebraLabel(w, wmm, hmm, small);
+          all.push(cur);
+          w.items.forEach(function (it) {
+            var tr = zebraRow(it);
+            cur.t.appendChild(tr);
+            // kalau isi melebihi tinggi label, pindahkan baris ini ke label lanjutan (header barcode sama)
+            if (cur.lb.scrollHeight > cur.lb.clientHeight + 1 && cur.t.rows.length > 2) {
+              cur.t.removeChild(tr);
+              cur = zebraLabel(w, wmm, hmm, small);
+              all.push(cur);
+              cur.t.appendChild(tr);
+            }
+          });
+        });
+        all.forEach(function (x, i) { x.cnt.textContent = 'Label ' + (i + 1) + '/' + all.length; });
+      }
+
+      function setPageStyle(layout, w, h) {
+        var css = layout === 'zebra'
+          ? '@page { size: ' + w + 'mm ' + h + 'mm; margin: 0; }'
+          : layout === 'a5l'
+            ? '@page { size: A5 landscape; margin: 8mm; }'
+            : '@page { size: A4 portrait; margin: 10mm; }';
+        $('pagestyle').textContent = css;
+      }
+
+      function render() {
+        var layout = $('layout').value;
+        var w = Math.max(40, parseInt($('lw').value, 10) || 100);
+        var h = Math.max(40, parseInt($('lh').value, 10) || 150);
+        try { window.localStorage.setItem('cb_slip_layout', layout); window.localStorage.setItem('cb_slip_w2', String(w)); window.localStorage.setItem('cb_slip_h2', String(h)); } catch (e) { }
+        $('sizebox').style.display = layout === 'zebra' ? '' : 'none';
+        setPageStyle(layout, w, h);
+        $('pages').textContent = '';
+        try {
+          if (layout === 'zebra') { renderZebra(w, h); } else { renderA4(layout === 'a5l'); }
+        } catch (e) { showErr(e.message); }
+      }
+
+      function start() {
+        $('slipno').textContent = 'Slip ' + data.slip;
+        try {
+          var l = window.localStorage.getItem('cb_slip_layout');
+          if (l === 'a4' || l === 'a5l' || l === 'zebra') { $('layout').value = l; }
+          if (window.localStorage.getItem('cb_slip_w2')) { $('lw').value = window.localStorage.getItem('cb_slip_w2'); }
+          if (window.localStorage.getItem('cb_slip_h2')) { $('lh').value = window.localStorage.getItem('cb_slip_h2'); }
+        } catch (e) { }
+        var lq = qs.get('layout'); if (lq === 'a4' || lq === 'a5l' || lq === 'zebra') { $('layout').value = lq; }
+        render();
+        if (AUTOPRINT) { setTimeout(function () { window.print(); }, 400); }
+      }
+
+      $('layout').addEventListener('change', render);
+      $('lw').addEventListener('change', render);
+      $('lh').addEventListener('change', render);
+      $('btnPrint').addEventListener('click', function () { window.print(); });
+
+      if (!ID && !MOCK) { showErr('Nomor slip tidak diberikan. Buka dari halaman kirim troli.'); return; }
+      var url = MOCK ? '../demo/slip.json' : '../api/trolley.php?slip=' + encodeURIComponent(ID);
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', url, true);
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState !== 4) { return; }
+        try {
+          var d = JSON.parse(xhr.responseText);
+          if (xhr.status !== 200 || d.error) { throw new Error(d.error || 'Sistem tidak memberikan respons yang valid.'); }
+          if (!d.found) { throw new Error('Slip tidak ditemukan.'); }
+          data = d; start();
+        } catch (e) { showErr('Slip belum dapat dimuat. ' + (e instanceof SyntaxError ? 'Sistem tidak memberikan respons yang valid.' : e.message)); }
+      };
+      xhr.send();
+    })();
+  </script>
+</body>
+
+</html>

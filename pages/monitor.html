@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Supply List Monitoring - Cover Bottom</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: clamp(9px, 0.95vw, 20px); }
+  body { background: #000; color: #fff; font-family: Arial, Helvetica, sans-serif; height: 100vh;
+         display: flex; flex-direction: column; overflow: hidden; }
+
+  header { display: grid; grid-template-columns: 17% 1fr 24%; align-items: center;
+           padding: .4rem .8rem; border-bottom: 1px solid #333; }
+  #clock { text-align: center; font-size: 1.6rem; line-height: 2.1rem; }
+  h1 { text-align: center; font-size: 3.4rem; letter-spacing: .05rem; }
+  #linebadge { text-align: right; font-size: 1.8rem; font-weight: bold; color: #ffd24d; }
+  #demo { display: none; text-align: center; background: #8a1c1c; font-size: 1.2rem; padding: .15rem; }
+
+  .legend { display: flex; justify-content: space-around; padding: .45rem 1rem; font-size: 1.3rem;
+            border-bottom: 1px solid #333; }
+  .legend i { display: inline-block; width: 4.4rem; height: 1.5rem; vertical-align: middle; margin-right: .6rem; }
+
+  .grid7 { display: grid; grid-template-columns: 1.15fr 2.4fr 1fr 1fr 1fr 1fr .9fr; gap: 2px; }
+  .bhead > div { background: #4b4b4b; color: #e6e6e6; text-align: center; padding: .45rem 0; font-size: 1.6rem; }
+  .brow > div { display: flex; align-items: center; justify-content: center; border-bottom: 1px solid #333;
+                min-height: 7.2rem; text-align: center; }
+  .num { font-size: 3.8rem; }
+  .dim { color: #777; }
+  .chip { width: 92%; height: 4.4rem; display: flex; align-items: center; justify-content: center;
+          font-size: 2.3rem; font-weight: bold; font-style: italic; color: #222;
+          clip-path: polygon(0 0, 88% 0, 100% 50%, 88% 100%, 0 100%); }
+  .st-FINISH  { background: #d9d9d9; }
+  .st-RUNNING { background: #00ff00; }
+  .st-NEXT    { background: #ffff00; }
+  .partcell { flex-direction: column; }
+  .partno { font-size: 3rem; line-height: 3.4rem; }
+  .partsub { font-size: 1.25rem; line-height: 1.6rem; color: #ddd; }
+  .raw { width: 90%; padding: .5rem .2rem; font-size: 1.7rem; font-weight: bold; color: #111; border-radius: .3rem; }
+  .raw-PREPARED { background: #ffd24d; } .raw-SEBAGIAN { background: #ffb066; } .raw-SUPPLY { background: #9be59b; }
+  .raw-FULL { background: #8fd0ff; } .trol { font-size: 1.5rem; font-weight: bold; color: #ddd; }
+  .raw-NOLIST { background: #ff0000; color: #fff; } .raw-CANCEL { background: #777; color: #eee; }
+  .c-FINISH { color: #fff; } .c-RUNNING { color: #00ff00; } .c-NEXT { color: #ffff00; }
+
+  #plan { flex: 1; min-height: 0; overflow: auto; border-top: 2px solid #333; margin-top: .3rem; }
+  #plan .ptitle { padding: .3rem .8rem; font-size: 1.6rem; color: #ddd; }
+  table { width: 100%; border-collapse: collapse; font-size: 1.35rem; }
+  th { background: #222; color: #ccc; text-align: left; padding: .25rem .5rem; position: sticky; top: 0; }
+  td { padding: .2rem .5rem; border-bottom: 1px solid #1d1d1d; }
+  td.r, th.r { text-align: right; }
+  tr.row-RUNNING td { background: #00ff00; color: #000; }
+  tr.row-NEXT td    { background: #ffff00; color: #000; }
+  tr.row-FINISH td  { background: #c8c8c8; color: #000; }
+  tr.row-WAIT td    { background: #000; color: #bbb; }
+
+  footer { display: flex; justify-content: space-between; padding: .25rem .8rem; font-size: 1.1rem;
+           border-top: 1px solid #333; color: #aaa; }
+  #err { color: #ff6b6b; }
+  #home { color: #8fb4e8; text-decoration: none; margin-right: 1rem; font-size: 1.15rem; }
+  #home:hover { text-decoration: underline; color: #fff; }
+  #debug { display: none; font-size: 1rem; background: #111; color: #9fe; padding: .4rem .8rem;
+           max-height: 30vh; overflow: auto; white-space: pre; border-top: 1px solid #333; }
+</style>
+</head>
+<body>
+<div id="demo">DATA CONTOH (mode demo), bukan data produksi</div>
+<header>
+  <div id="clock"><div id="cd"></div><div id="ct"></div></div>
+  <h1>SUPPLY LIST MONITORING</h1>
+  <div id="linebadge"></div>
+</header>
+
+<div class="legend">
+  <span><i style="background:#d9d9d9"></i>FINISH</span>
+  <span><i style="background:#00ff00"></i>RUNNING</span>
+  <span><i style="background:#ffff00"></i>NEXT</span>
+  <span><i style="background:#8fd0ff"></i>FULL KIT</span>
+  <span><i style="background:#ff0000"></i>SHORTAGE</span>
+</div>
+
+<div class="grid7 bhead">
+  <div>PLAN STATUS</div><div>PARTNO</div><div>PLAN QTY</div><div>PROD QTY</div><div>ACH</div><div>RAW</div><div>RACK</div>
+</div>
+<div id="board"></div>
+
+<div id="plan">
+  <div class="ptitle" id="ptitle">PLANNING</div>
+  <table>
+    <thead><tr>
+      <th>No</th><th>ProdNo</th><th>Part No</th><th>Work Order</th><th>Lot No</th><th>LED Lot</th>
+      <th class="r">Plan</th><th class="r">Prod</th><th class="r">ACH</th><th>Status</th><th>Supply</th>
+    </tr></thead>
+    <tbody id="ptable"></tbody>
+  </table>
+</div>
+
+<pre id="debug"></pre>
+<footer>
+  <span><a id="home" href="../index.html">&larr; Beranda</a><span id="foot">Memuat data...</span></span>
+  <span id="err"></span>
+  <span id="cdown"></span>
+</footer>
+
+<script>
+(function () {
+  var qs = new URLSearchParams(location.search);
+  var LINE = qs.get('line') || '2';
+  var DATE = qs.get('date') || '';
+  var DEBUG = qs.has('debug');
+  var MOCK = qs.has('mock');
+  var REFRESH = 60;
+  var remaining = REFRESH;
+  var lastData = null;
+
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) { e.className = cls; }
+    if (text !== undefined && text !== null) { e.textContent = text; }
+    return e;
+  }
+  function fmt(n) { return Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 }); }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+
+  // ---------------- Aturan status (usulan, perlu dikonfirmasi tim) ----------------
+  // RUNNING : cStatus = 1
+  // NEXT    : IsNextModel = 1 dan belum pernah berjalan (belum ada scan)
+  // FINISH  : sudah ada scan dan cStatus = 0 (operator sudah menutup)
+  // WAIT    : belum jalan dan belum dipilih sebagai next
+  function statusOf(r) {
+    var started = r.scanIn > 0 || r.scanOut > 0 || r.scanLed > 0;
+    if (r.cStatus === 1) { return 'RUNNING'; }
+    if (r.isNext === 1 && !started) { return 'NEXT'; }
+    if (started) { return 'FINISH'; }
+    return 'WAIT';
+  }
+  function prodOf(r, src) {
+    if (src === 'scanout' || !r.woFound) { return r.scanOut; }
+    return r.prodErp;
+  }
+  function achOf(plan, prod) { return plan > 0 ? Math.round(prod / plan * 100) : 0; }
+
+  function supplyText(r) {
+    if (!SUPPLY_READY) { return '-'; }
+    if (r.supply) {
+      if (r.supply.status === 'RECEIVED') { return 'FULL KIT'; }
+      if (r.supply.status === 'SUPPLY') { return r.supply.complete ? 'SUPPLY' : 'SEBAGIAN'; }
+      return r.supply.status;
+    }
+    return (r.status === 'RUNNING' || r.status === 'NEXT') ? 'TANPA LIST' : '-';
+  }
+
+  function prepare(data) {
+    var rows = data.rows.map(function (r) {
+      var c = {};
+      for (var k in r) { c[k] = r[k]; }
+      c.status = statusOf(r);
+      c.prod = prodOf(r, data.prodSource);
+      c.ach = achOf(r.plan, c.prod);
+      return c;
+    });
+    function pick(st, last) {
+      var f = rows.filter(function (r) { return r.status === st; });
+      if (!f.length) { return null; }
+      f.sort(function (a, b) { return a.id - b.id; });
+      return last ? f[f.length - 1] : f[0];
+    }
+    return { rows: rows, finish: pick('FINISH', true), running: pick('RUNNING', true), next: pick('NEXT', false) };
+  }
+
+  var SUPPLY_READY = false;
+  // Status supply list per baris. WO running atau next tanpa supply list ditandai merah (tidak memblokir produksi).
+  function rawOf(r, kind) {
+    if (!r || !SUPPLY_READY) { return null; }
+    if (r.supply) {
+      var s = r.supply.status;
+      if (s === 'PREPARED') { return { cls: 'PREPARED', text: 'PREPARED' }; }
+      if (s === 'SUPPLY') { return r.supply.complete ? { cls: 'SUPPLY', text: 'SUPPLY' } : { cls: 'SEBAGIAN', text: 'SEBAGIAN' }; }
+      if (s === 'RECEIVED') { return { cls: 'FULL', text: 'FULL KIT' }; }
+      if (s === 'CANCEL') { return kind === 'FINISH' ? null : { cls: 'NOLIST', text: 'DIBATALKAN' }; }
+    }
+    return (kind === 'RUNNING' || kind === 'NEXT') ? { cls: 'NOLIST', text: 'TANPA LIST' } : null;
+  }
+
+  function boardRow(kind, r) {
+    var row = el('div', 'grid7 brow');
+    var c1 = el('div');
+    c1.appendChild(el('div', 'chip st-' + kind, kind));
+    row.appendChild(c1);
+
+    var c2 = el('div', 'partcell');
+    if (r) {
+      c2.appendChild(el('div', 'partno c-' + kind, r.partNo));
+      c2.appendChild(el('div', 'partsub', r.partNm));
+      c2.appendChild(el('div', 'partsub', r.wo + '  |  ProdNo ' + r.prodNo + '  |  LED ' + r.ledLot));
+    } else {
+      c2.appendChild(el('div', 'partno dim', '-'));
+    }
+    row.appendChild(c2);
+
+    [r ? fmt(r.plan) : '-', r ? fmt(r.prod) : '-', r ? r.ach + ' %' : '-'].forEach(function (t) {
+      var c = el('div');
+      c.appendChild(el('div', 'num' + (r ? '' : ' dim'), t));
+      row.appendChild(c);
+    });
+    // RAW = status supply list. RACK diisi di tahap scan troli.
+    var cr = el('div');
+    var rw = rawOf(r, kind);
+    if (rw) { cr.appendChild(el('div', 'raw raw-' + rw.cls, rw.text)); } else { cr.appendChild(el('div', 'num dim', '-')); }
+    row.appendChild(cr);
+    var ck = el('div');
+    if (r && r.supply && r.supply.trolleys) { ck.appendChild(el('div', 'trol', r.supply.trolleys)); } else { ck.appendChild(el('div', 'num dim', '-')); }
+    row.appendChild(ck);
+    return row;
+  }
+
+  function render(data) {
+    var p = prepare(data);
+    SUPPLY_READY = !!data.supplyReady;
+
+    document.getElementById('linebadge').textContent = 'COVER BOTTOM - ' + data.line;
+    document.getElementById('ptitle').textContent = 'PLANNING ' + data.line + '   (tanggal ' + data.date + ')';
+
+    var board = document.getElementById('board');
+    board.textContent = '';
+    board.appendChild(boardRow('FINISH', p.finish));
+    board.appendChild(boardRow('RUNNING', p.running));
+    board.appendChild(boardRow('NEXT', p.next));
+
+    var tb = document.getElementById('ptable');
+    tb.textContent = '';
+    p.rows.forEach(function (r, i) {
+      var tr = el('tr', 'row-' + r.status);
+      var cells = [
+        [String(i + 1), ''], [r.prodNo, ''], [r.partNo, ''], [r.wo, ''], [r.lotNo, ''], [r.ledLot, ''],
+        [fmt(r.plan), 'r'], [fmt(r.prod), 'r'], [r.ach + ' %', 'r'], [r.status, ''],
+        [supplyText(r), '']
+      ];
+      cells.forEach(function (c) { tr.appendChild(el('td', c[1], c[0])); });
+      tb.appendChild(tr);
+    });
+
+    var src = data.prodSource === 'scanout' ? 'Prod = ScanOut per ProdNo' : 'Prod = prod_gd_qty ERP per WO';
+    document.getElementById('foot').textContent = DEBUG
+      ? 'Data ' + data.generated + '  |  Plan = work_ord_qty ERP per WO  |  ' + src + '  |  RACK = nomor troli'
+      : 'Data diperbarui ' + data.generated;
+
+    if (DEBUG) {
+      var d = document.getElementById('debug');
+      d.style.display = 'block';
+      var head = 'id  prodNo  cStatus isNext scanIn scanLed scanOut prodErp plan  status\n';
+      d.textContent = head + p.rows.map(function (r) {
+        return [r.id, r.prodNo, r.cStatus, r.isNext, r.scanIn, r.scanLed, r.scanOut, r.prodErp, r.plan, r.status].join('\t');
+      }).join('\n');
+    }
+  }
+
+  function load() {
+    var url = MOCK ? '../demo/line' + encodeURIComponent(LINE) + '.json'
+                   : '../api/monitor.php?line=' + encodeURIComponent(LINE) + (DATE ? '&date=' + encodeURIComponent(DATE) : '');
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.onreadystatechange = function () {
+      if (xhr.readyState !== 4) { return; }
+      var err = document.getElementById('err');
+      try {
+        var data = JSON.parse(xhr.responseText);
+        if (xhr.status !== 200 || data.error) {
+          throw new Error((data && data.error ? data.error : 'HTTP ' + xhr.status) + (data && data.detail ? ': ' + data.detail : ''));
+        }
+        lastData = data;
+        render(data);
+        err.textContent = '';
+      } catch (e) {
+        err.textContent = (lastData ? 'Data belum dapat diperbarui, menampilkan data terakhir.' : 'Data belum dapat dimuat.')
+          + (DEBUG ? ' [' + e.message + ']' : '');
+      }
+      remaining = REFRESH;
+    };
+    xhr.send();
+  }
+
+  function tick() {
+    var n = new Date();
+    document.getElementById('cd').textContent = n.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+    document.getElementById('ct').textContent = pad(n.getHours()) + ':' + pad(n.getMinutes()) + ':' + pad(n.getSeconds());
+    remaining -= 1;
+    document.getElementById('cdown').textContent = 'Diperbarui dalam ' + Math.max(remaining, 0) + ' detik';
+    if (remaining <= 0) { remaining = REFRESH; load(); }
+  }
+
+  if (MOCK) { document.getElementById('demo').style.display = 'block'; }
+  document.getElementById('linebadge').textContent = 'COVER BOTTOM - LINE ' + LINE;
+  load();
+  tick();
+  setInterval(tick, 1000);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pratinjau Supply List - Cover Bottom</title>
+<script src="../assets/js/nav.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: Arial, Helvetica, sans-serif; background: #eef1f5; color: #222; margin: 0; padding: 20px; }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  h1 { margin: 0 0 2px; font-size: 22px; color: #1f3a5f; }
+  .sub { color: #666; font-size: 13px; margin-bottom: 12px; }
+  .bar { background: #fff; border-radius: 6px; padding: 10px 14px; margin-bottom: 14px; font-size: 14px;
+         box-shadow: 0 1px 4px rgba(0,0,0,.1); display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+  .bar a { color: #1f3a5f; text-decoration: none; padding: 4px 10px; border-radius: 4px; background: #e3e8ef; }
+  .bar a.on { background: #1f3a5f; color: #fff; }
+  .warn { background: #fff4d6; border: 1px solid #e3c766; color: #6b5500; padding: 8px 12px; border-radius: 5px;
+          font-size: 13px; margin-bottom: 14px; }
+  .card { background: #fff; border-radius: 6px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.1); overflow: hidden;
+          page-break-inside: avoid; }
+  .chead { background: #1f3a5f; color: #fff; padding: 8px 12px; font-size: 14px; display: flex; flex-wrap: wrap; gap: 16px; }
+  .chead b { font-size: 15px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { background: #e9edf2; text-align: left; padding: 5px 8px; }
+  td { padding: 4px 8px; border-bottom: 1px solid #e6e9ed; vertical-align: top; }
+  td.r, th.r { text-align: right; }
+  .empty { padding: 12px; color: #8a1c1c; font-size: 13px; }
+  #err { color: #b3261e; margin: 8px 0; font-size: 14px; }
+  @media print { body { background: #fff; padding: 0; } .bar, .warn { display: none; } .card { box-shadow: none; border: 1px solid #999; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Pratinjau Supply List Cover Bottom</h1>
+  <div class="sub" id="sub">Memuat data...</div>
+
+  <div class="bar">
+    <span>Line:</span>
+    <a href="supply.html?line=2" id="l2">LINE 2</a>
+    <a href="supply.html?line=3" id="l3">LINE 3</a>
+    <a href="#" onclick="window.print();return false;">Cetak</a>
+    <a href="monitor.html" id="lm">Kembali ke monitor</a>
+  </div>
+
+  <div class="warn">
+    Pratinjau, belum ada yang disimpan. Kebutuhan (need) = usage x plan WO. Stok belum dihitung, jadi jumlah disiapkan (prepare) = need
+    dan semua part BOM ikut. BOM yang dipakai adalah BOM yang berlaku pada tanggal WO.
+  </div>
+
+  <div id="err"></div>
+  <div id="list"></div>
+</div>
+
+<script>
+(function () {
+  var qs = new URLSearchParams(location.search);
+  var LINE = qs.get('line') || '2';
+  var DATE = qs.get('date') || '';
+  var MOCK = qs.has('mock');
+
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) { e.className = cls; }
+    if (text !== undefined && text !== null) { e.textContent = text; }
+    return e;
+  }
+  function fmt(n) { return Number(n).toLocaleString('en-US', { maximumFractionDigits: 5 }); }
+
+  document.getElementById(LINE === '3' ? 'l3' : 'l2').className = 'on';
+  document.getElementById('lm').href = 'monitor.html?line=' + encodeURIComponent(LINE) + (MOCK ? '&mock=1' : '');
+
+  function render(data) {
+    document.getElementById('sub').textContent =
+      data.line + '  |  tanggal ' + data.date + '  |  data diambil ' + data.generated + '  |  ' + data.items.length + ' WO';
+    var list = document.getElementById('list');
+    list.textContent = '';
+    if (!data.items.length) { list.appendChild(el('div', 'empty', 'Tidak ada WO untuk line dan tanggal ini.')); return; }
+
+    data.items.forEach(function (w) {
+      var card = el('div', 'card');
+      var h = el('div', 'chead');
+      var a = el('span'); a.appendChild(el('b', null, w.wo)); h.appendChild(a);
+      h.appendChild(el('span', null, 'Part ' + w.partNo + (w.partNm ? ' (' + w.partNm + ')' : '')));
+      h.appendChild(el('span', null, 'Plan ' + fmt(w.plan)));
+      h.appendChild(el('span', null, 'ProdNo ' + w.prodNo));
+      h.appendChild(el('span', null, 'BOM berlaku ' + w.bomDate));
+      card.appendChild(h);
+
+      if (!w.woFound) { card.appendChild(el('div', 'empty', 'WO tidak ditemukan di ERP, plan dianggap 0.')); }
+      if (!w.items.length) {
+        card.appendChild(el('div', 'empty', 'BOM tidak ditemukan untuk part ' + w.partNo + ' pada tanggal ' + w.bomDate + '.'));
+      } else {
+        var t = el('table');
+        var hr = el('tr');
+        [['No', ''], ['Child Part', ''], ['Nama', ''], ['Spec', ''], ['Unit', ''], ['Usage', 'r'], ['Need', 'r'],
+         ['Prepare', 'r'], ['Gudang', '']].forEach(function (c) { hr.appendChild(el('th', c[1], c[0])); });
+        t.appendChild(hr);
+        w.items.forEach(function (it, i) {
+          var tr = el('tr');
+          [[String(i + 1), ''], [it.partNo, ''], [it.partNm, ''], [it.spec, ''], [it.unit, ''],
+           [fmt(it.usage), 'r'], [fmt(it.need), 'r'], [fmt(it.prepare), 'r'], [it.strg, '']].forEach(function (c) {
+            tr.appendChild(el('td', c[1], c[0]));
+          });
+          t.appendChild(tr);
+        });
+        card.appendChild(t);
+      }
+      list.appendChild(card);
+    });
+  }
+
+  var url = MOCK ? '../demo/supply' + encodeURIComponent(LINE) + '.json'
+                 : '../api/supply.php?line=' + encodeURIComponent(LINE) + (DATE ? '&date=' + encodeURIComponent(DATE) : '');
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', url, true);
+  xhr.onreadystatechange = function () {
+    if (xhr.readyState !== 4) { return; }
+    try {
+      var data = JSON.parse(xhr.responseText);
+      if (xhr.status !== 200 || data.error) {
+        throw new Error((data && data.error ? data.error : 'HTTP ' + xhr.status) + (data && data.detail ? ': ' + data.detail : ''));
+      }
+      render(data);
+    } catch (e) {
+      document.getElementById('err').textContent = 'Gagal memuat: ' + e.message;
+      document.getElementById('sub').textContent = '';
+    }
+  };
+  xhr.send();
+})();
+</script>
+</body>
+</html>

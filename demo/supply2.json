@@ -1,0 +1,138 @@
+{
+ "generated": "2026-10-15 09:00:00",
+ "date": "2026-10-15",
+ "line": "LINE 2",
+ "items": [
+  {
+   "wo": "MO26101400114",
+   "prodNo": "0007",
+   "partNo": "LC43200054F",
+   "partNm": "ASSY COVER BOTTOM",
+   "plan": 200,
+   "woFound": true,
+   "bomDate": "2026-10-14",
+   "items": [
+    {
+     "partNo": "DHD-090-0007",
+     "partNm": "LABEL LCM",
+     "spec": "-",
+     "unit": "EA",
+     "strg": "A100001",
+     "usage": 1,
+     "need": 200,
+     "prepare": 200
+    },
+    {
+     "partNo": "DHD-090-0008",
+     "partNm": "CARBON PAPER",
+     "spec": "THERMAL RIBBON HL-45 OUT 1\" 5X300",
+     "unit": "RL",
+     "strg": "A100001",
+     "usage": 8e-05,
+     "need": 0.016,
+     "prepare": 0.016
+    },
+    {
+     "partNo": "FAB33781211",
+     "partNm": "Screw",
+     "spec": "3mM, 3.5mM SWCH18A FZMW",
+     "unit": "EA",
+     "strg": "A100001",
+     "usage": 4,
+     "need": 800,
+     "prepare": 800
+    },
+    {
+     "partNo": "LC43490129A",
+     "partNm": "ASS'Y LED B/L",
+     "spec": "Metal, 1616PKG, L466.1*W13*T1.0.",
+     "unit": "EA",
+     "strg": "A100001",
+     "usage": 5,
+     "need": 1000,
+     "prepare": 1000
+    },
+    {
+     "partNo": "LC43920023A",
+     "partNm": "ASS'Y, WIRE",
+     "spec": "HC430DGG-SLTL1",
+     "unit": "EA",
+     "strg": "A100001",
+     "usage": 1,
+     "need": 200,
+     "prepare": 200
+    },
+    {
+     "partNo": "LC43A131010C",
+     "partNm": "HOLDER, SPCB",
+     "spec": "PS-8170A, L20*W10*T0.24, Gray",
+     "unit": "EA",
+     "strg": "A100001",
+     "usage": 6,
+     "need": 1200,
+     "prepare": 1200
+    },
+    {
+     "partNo": "LC43B121001A",
+     "partNm": "BACK COVER HOLDER",
+     "spec": "ABS XG571-G(Color : G8Q378)",
+     "unit": "EA",
+     "strg": "A100001",
+     "usage": 4,
+     "need": 800,
+     "prepare": 800
+    },
+    {
+     "partNo": "LC49711012A",
+     "partNm": "TAPE, SHIELD",
+     "spec": "JA522#, L40*W30*T0.055, BLACK",
+     "unit": "EA",
+     "strg": "A100001",
+     "usage": 11,
+     "need": 2200,
+     "prepare": 2200
+    },
+    {
+     "partNo": "LC65741245A",
+     "partNm": "TAPE, SHIELD (HOLE COVER)",
+     "spec": "ER-8505SB, BLACK, L50.0xW30.0xT0.055",
+     "unit": "EA",
+     "strg": "A100001",
+     "usage": 2,
+     "need": 400,
+     "prepare": 400
+    },
+    {
+     "partNo": "LG43260001A",
+     "partNm": "ASSY BRACKET",
+     "spec": "HC430DQN-ABDA5-91451",
+     "unit": "EA",
+     "strg": "A100001",
+     "usage": 2,
+     "need": 400,
+     "prepare": 400
+    },
+    {
+     "partNo": "ZTPEMA001HSIN",
+     "partNm": "Tape, Paper",
+     "spec": "SAZANAMI MASKING TAPE 24mm*15mm for Assy, Wire",
+     "unit": "RL",
+     "strg": "A100001",
+     "usage": 0.00213,
+     "need": 0.426,
+     "prepare": 0.426
+    }
+   ]
+  },
+  {
+   "wo": "MO26101500099",
+   "prodNo": "0009",
+   "partNo": "LC00000000X",
+   "partNm": "CONTOH BOM KOSONG",
+   "plan": 120,
+   "woFound": true,
+   "bomDate": "2026-10-15",
+   "items": []
+  }
+ ]
+}

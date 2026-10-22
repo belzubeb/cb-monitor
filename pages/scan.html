@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Troli - Cover Bottom</title>
+<link rel="stylesheet" href="../assets/css/cb.css">
+<script src="../assets/js/cb.js"></script>
+<script src="../assets/js/nav.js"></script>
+</head>
+<body>
+<div id="msg" class="toast" role="alert"></div>
+<div class="wrap">
+  <div class="pagehead"><span class="chip" id="modechip">OUT</span><h1 id="title">Troli</h1></div>
+
+  <div class="panel">
+    <div class="fields">
+      <div>
+        <label for="user">Nama atau ID petugas</label>
+        <input type="text" id="user" autocomplete="off" placeholder="mis. BUDI atau NIK">
+      </div>
+      <div id="trolleyField">
+        <label for="trolley" id="trolleyLabel">Nomor troli</label>
+        <input type="text" id="trolley" autocomplete="off" placeholder="mis. T261020-001">
+      </div>
+    </div>
+    <p class="help" id="hint"></p>
+  </div>
+
+  <div id="outBox" style="display:none">
+    <div class="panel">
+      <h2>WO yang ada di troli ini</h2>
+      <label for="woscan">Scan barcode WO, atau ketuk barisnya di tabel</label>
+      <input type="text" id="woscan" autocomplete="off" placeholder="scan barcode WO lalu Enter">
+      <div class="scroll" style="margin-top:.9rem"><table class="data" id="wotable"></table></div>
+      <p class="help">Centang <b>Troli terakhir</b> hanya jika ini troli terakhir untuk WO itu (semua part WO sudah terkirim).</p>
+    </div>
+    <div class="actionbar">
+      <span class="count" id="pickCount">Belum ada WO dipilih</span>
+      <button class="go" id="btnOut" type="button">Kirim troli</button>
+    </div>
+  </div>
+
+  <div id="inBox" style="display:none">
+    <div class="panel">
+      <h2 id="inTitle">Isi troli</h2>
+      <div class="scroll"><table class="data" id="intable"></table></div>
+    </div>
+    <div class="actionbar">
+      <span class="count">Cek isi troli, lalu terima</span>
+      <button class="go" id="btnIn" type="button">Terima troli</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Troli sedang di jalan</h2>
+    <div class="scroll"><table class="data" id="opentable"></table></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var qs = new URLSearchParams(location.search);
+  var DEBUG = qs.has('debug');
+  var MODE = qs.get('mode') === 'in' ? 'in' : 'out';
+  var needPin = false;
+  var pin = '';
+  var woRows = [];
+  var picked = {};      // wo -> true
+  var completeMap = {}; // wo -> true
+  var lookedUp = null;
+  var toastTimer = null;
+
+  document.body.className = MODE;
+  document.getElementById('modechip').textContent = MODE === 'out' ? 'OUT' : 'IN';
+  document.getElementById('title').textContent = MODE === 'out' ? 'Kirim troli (gudang)' : 'Terima troli (line)';
+  if (MODE === 'out') {
+    // Nomor troli dibuat otomatis oleh sistem saat dikirim, jadi tidak perlu diketik.
+    document.getElementById('trolleyField').style.display = 'none';
+    document.getElementById('hint').textContent = 'Nomor troli dibuat otomatis saat troli dikirim. Setelah itu slip berbarcode dicetak dan ditempel pada troli. Nama petugas disimpan di komputer ini.';
+  } else {
+    document.getElementById('trolleyLabel').textContent = 'Scan barcode slip (SLP......) atau ketik nomor troli, lalu Enter';
+    document.getElementById('trolley').placeholder = 'scan slip, atau ketik mis. T261020-001';
+    document.getElementById('hint').textContent = 'Nama petugas disimpan di komputer ini. Nomor troli tercetak di slip dan tampil di daftar bawah.';
+  }
+
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) { e.className = cls; }
+    if (text !== undefined && text !== null) { e.textContent = text; }
+    return e;
+  }
+  function $(id) { return document.getElementById(id); }
+
+  // Bunyi pendek supaya operator tidak perlu menatap layar: tinggi = berhasil, rendah = gagal
+  function beep(ok) {
+    try {
+      var C = window.AudioContext || window.webkitAudioContext; if (!C) { return; }
+      var ctx = new C(), o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.value = ok ? 880 : 220; g.gain.value = 0.15;
+      o.connect(g); g.connect(ctx.destination); o.start();
+      o.stop(ctx.currentTime + (ok ? 0.12 : 0.35));
+    } catch (e) { }
+  }
+  function showToast(ok) {
+    var m = $('msg'); m.className = 'toast ' + (ok ? 'ok' : 'bad');
+    window.clearTimeout(toastTimer);
+    if (ok) { toastTimer = window.setTimeout(clearMsg, 6000); }
+    beep(ok);
+  }
+  function say(t, ok) {
+    var m = $('msg'); m.textContent = t;
+    if (!ok) { m.appendChild(el('small', '', 'Ketuk untuk menutup')); }
+    showToast(ok);
+  }
+  function sayLink(t, href, linkText) {
+    var m = $('msg'); m.textContent = t + ' ';
+    var a = el('a', '', linkText); a.href = href; a.target = '_blank';
+    a.addEventListener('click', function (ev) { ev.stopPropagation(); });
+    m.appendChild(a);
+    showToast(true);
+  }
+  function clearMsg() { $('msg').className = 'toast'; $('msg').textContent = ''; }
+  $('msg').addEventListener('click', clearMsg);
+
+  function today() {
+    var d = new Date(); function p(n) { return (n < 10 ? '0' : '') + n; }
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+  function fmt(n) { return Number(n).toLocaleString('en-US', { maximumFractionDigits: 3 }); }
+
+  function req(method, url, body, cb) {
+    var xhr = new XMLHttpRequest();
+    xhr.open(method, url, true);
+    if (method === 'POST') { xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded'); }
+    xhr.onreadystatechange = function () {
+      if (xhr.readyState !== 4) { return; }
+      var data;
+      try { data = JSON.parse(xhr.responseText); } catch (e) { data = { error: 'Sistem tidak memberikan respons. Periksa jaringan atau hubungi tim IT.', detail: DEBUG ? 'kode ' + xhr.status : '' }; }
+      cb(xhr.status, data);
+    };
+    xhr.send(body || null);
+  }
+  function errText(data) { return (data && data.error ? data.error : 'Gagal') + (DEBUG && data && data.detail ? ' - ' + data.detail : ''); }
+  function needUser() {
+    if ($('user').value.trim()) { return false; }
+    say('Isi nama atau ID petugas terlebih dahulu.', false); $('user').focus(); return true;
+  }
+
+  // ---- nama petugas diingat ----
+  try { $('user').value = window.localStorage.getItem('cb_user') || ''; } catch (e) { }
+  $('user').addEventListener('change', function () { try { window.localStorage.setItem('cb_user', $('user').value.trim()); } catch (e) { } });
+
+  // ---- daftar troli di jalan ----
+  function emptyRow(t, cols, text) {
+    var r = el('tr'); var c = el('td', 'empty', text); c.colSpan = cols; r.appendChild(c); t.appendChild(r);
+  }
+  function loadOpen() {
+    req('GET', '../api/trolley.php?open=1', null, function (st, data) {
+      var t = $('opentable'); t.textContent = '';
+      if (st !== 200 || data.error) { emptyRow(t, 7, 'Daftar troli belum dapat dimuat: ' + errText(data)); return; }
+      needPin = !!data.needPin;
+      var hr = el('tr'); ['Slip', 'Troli', 'Line', 'WO', 'Keluar', 'Petugas', ''].forEach(function (h) { hr.appendChild(el('th', '', h)); }); t.appendChild(hr);
+      if (!data.rows.length) { emptyRow(t, 7, 'Tidak ada troli di jalan.'); }
+      data.rows.forEach(function (r) {
+        var tr = el('tr');
+        var cc = el('td'); cc.appendChild(el('b', '', r.slip)); tr.appendChild(cc);
+        tr.appendChild(el('td', '', r.code === '-' ? '' : r.code));
+        tr.appendChild(el('td', '', r.line)); tr.appendChild(el('td', '', r.wos)); tr.appendChild(el('td', '', r.outDt)); tr.appendChild(el('td', '', r.outBy));
+        var ac = el('td'); ac.style.whiteSpace = 'nowrap';
+        if (MODE === 'in') { var bu = el('button', '', 'Pakai'); bu.style.marginRight = '.5rem'; bu.addEventListener('click', function () { $('trolley').value = r.slip; doTrolley(); }); ac.appendChild(bu); }
+        var bp = el('a', 'small', 'Cetak ulang'); bp.href = 'slip.html?id=' + r.id; bp.target = '_blank'; bp.style.marginRight = '.7rem'; bp.style.color = 'var(--link)'; ac.appendChild(bp);
+        var bv = el('button', 'void', 'Batalkan kirim'); bv.addEventListener('click', function () { doVoid(r); }); ac.appendChild(bv);
+        tr.appendChild(ac); t.appendChild(tr);
+      });
+    });
+  }
+
+  function withPin(next) {
+    if (!needPin || pin !== '') { next(); return; }
+    cbPin({ title: 'Masukkan PIN', message: 'PIN diperlukan untuk membatalkan pengiriman.', okText: 'Lanjutkan' }, function (v) { pin = v; next(); });
+  }
+  function doVoid(r) {
+    if (needUser()) { return; }
+    var user = $('user').value.trim();
+    var nama = r.code && r.code !== '-' ? 'troli ' + r.code : 'slip ' + r.slip;
+    cbConfirm({ title: 'Batalkan pengiriman?', message: 'Pengiriman ' + nama + ' akan dibatalkan.', okText: 'Batalkan pengiriman', cancelText: 'Kembali', danger: true }, function () {
+      withPin(function () {
+        req('POST', '../api/trolley.php', 'action=void&id=' + encodeURIComponent(r.id) + '&user=' + encodeURIComponent(user) + '&pin=' + encodeURIComponent(pin), function (st, data) {
+          if (st === 403) { pin = ''; }
+          if (st !== 200 || data.error) { say(errText(data), false); return; }
+          say(data.message, true); loadOpen(); if (MODE === 'out') { loadWos(); }
+        });
+      });
+    });
+  }
+
+  // ---- mode OUT ----
+  function updateCount() {
+    var n = Object.keys(picked).length;
+    $('pickCount').textContent = n ? n + ' WO dipilih' : 'Belum ada WO dipilih';
+    $('btnOut').disabled = !n;
+  }
+  function setPick(wo, on) {
+    if (on) { picked[wo] = true; } else { delete picked[wo]; delete completeMap[wo]; }
+    renderWos();
+  }
+  function statusTag(s) {
+    var c = s === 'PREPARED' ? 'prep' : (s === 'RECEIVED' ? 'kit' : 'ok');
+    return el('span', 'tag ' + c, s);
+  }
+  function renderWos() {
+    var t = $('wotable'); t.textContent = '';
+    var hr = el('tr'); ['Kirim', 'Troli terakhir', 'WO', 'Line', 'Part', 'Plan', 'Supply list'].forEach(function (h) { hr.appendChild(el('th', '', h)); }); t.appendChild(hr);
+    if (!woRows.length) { emptyRow(t, 7, 'Belum ada supply list hari ini. Buat terlebih dahulu di halaman Planning hari ini.'); }
+    woRows.forEach(function (w) {
+      var tr = el('tr', 'pick' + (picked[w.wo] ? ' picked' : ''));
+      tr.addEventListener('click', function (ev) { if (ev.target.tagName !== 'INPUT') { setPick(w.wo, !picked[w.wo]); } });
+      var c1 = el('td'); var cb = el('input'); cb.type = 'checkbox'; cb.checked = !!picked[w.wo];
+      cb.setAttribute('aria-label', 'Kirim ' + w.wo);
+      cb.addEventListener('change', function () { setPick(w.wo, cb.checked); });
+      c1.appendChild(cb); tr.appendChild(c1);
+      var c2 = el('td'); var cc = el('input'); cc.type = 'checkbox'; cc.checked = !!completeMap[w.wo]; cc.disabled = !picked[w.wo];
+      cc.setAttribute('aria-label', 'Troli terakhir untuk ' + w.wo);
+      cc.addEventListener('change', function () { if (cc.checked) { completeMap[w.wo] = true; } else { delete completeMap[w.wo]; } });
+      c2.appendChild(cc); tr.appendChild(c2);
+      var c3 = el('td'); c3.appendChild(el('b', '', w.wo)); tr.appendChild(c3);
+      tr.appendChild(el('td', '', w.line));
+      var c5 = el('td'); c5.appendChild(el('div', '', w.partNo)); if (w.partNm) { c5.appendChild(el('div', 'small', w.partNm)); } tr.appendChild(c5);
+      tr.appendChild(el('td', '', fmt(w.plan)));
+      var c7 = el('td'); c7.appendChild(statusTag(w.status));
+      if (w.trolleys > 0) { c7.appendChild(el('div', 'small', w.trolleys + ' troli sebelumnya' + (w.complete ? ', sudah ditandai lengkap' : ''))); }
+      tr.appendChild(c7); t.appendChild(tr);
+    });
+    updateCount();
+  }
+  function loadWos() {
+    req('GET', '../api/trolley.php?wos=1&date=' + encodeURIComponent(today()), null, function (st, data) {
+      if (st !== 200 || data.error) { say('Daftar WO belum dapat dimuat: ' + errText(data), false); return; }
+      woRows = data.rows; renderWos();
+    });
+  }
+  $('woscan').addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter') { return; }
+    var v = $('woscan').value.trim().toUpperCase(); $('woscan').value = '';
+    if (!v) { return; }
+    var hit = null;
+    woRows.forEach(function (w) { if (w.wo.toUpperCase() === v || v.indexOf(w.wo.toUpperCase()) !== -1) { hit = w; } });
+    if (!hit) { say('WO ' + v + ' tidak ada di daftar (belum punya supply list atau dibatalkan).', false); return; }
+    clearMsg(); setPick(hit.wo, true); beep(true);
+  });
+  $('btnOut').addEventListener('click', function () {
+    if (needUser()) { return; }
+    var user = $('user').value.trim(); var code = '';  // kosong = nomor troli dibuat otomatis oleh server
+    var wos = Object.keys(picked); var comp = Object.keys(completeMap);
+    if (!wos.length) { say('Pilih sedikitnya satu WO.', false); return; }
+    var msg = 'Troli baru (nomor dibuat otomatis) berisi ' + wos.length + ' WO' + (comp.length ? ' (' + comp.length + ' ditandai troli terakhir)' : '') + '.\n' + wos.join(', ');
+    cbConfirm({ title: 'Kirim troli?', message: msg, okText: 'Kirim troli' }, function () {
+      $('btnOut').disabled = true;
+      req('POST', '../api/trolley.php', 'action=out&trolley=' + encodeURIComponent(code) + '&user=' + encodeURIComponent(user) +
+          '&wos=' + encodeURIComponent(wos.join(',')) + '&complete=' + encodeURIComponent(comp.join(',')), function (st, data) {
+        if (st !== 200 || data.error) { say(errText(data), false); updateCount(); return; }
+        var slipUrl = 'slip.html?id=' + encodeURIComponent(data.id) + '&print=1';
+        sayLink(data.message, slipUrl, 'Cetak slip ' + data.slip);
+        try { window.open(slipUrl, '_blank'); } catch (e) { }
+        picked = {}; completeMap = {}; loadWos(); loadOpen(); $('woscan').focus();
+      });
+    });
+  });
+
+  // ---- mode IN ----
+  function showLookup(d) {
+    var t = $('intable'); t.textContent = ''; lookedUp = d;
+    $('inBox').style.display = 'block'; $('btnIn').disabled = true;
+    if (!d.found) { $('inTitle').textContent = 'Troli ' + d.code + ' tidak ada'; emptyRow(t, 5, 'Troli ini belum pernah dikirim (Scan OUT).'); beep(false); return; }
+    $('inTitle').textContent = (d.code && d.code !== '-' ? 'Troli ' + d.code + ' (' + d.slip + ')' : d.slip) + ', keluar ' + d.outDt + ' oleh ' + d.outBy;
+    var hr = el('tr'); ['WO', 'Line', 'Part', 'Plan', 'Isi'].forEach(function (h) { hr.appendChild(el('th', '', h)); }); t.appendChild(hr);
+    d.wos.forEach(function (w) {
+      var tr = el('tr'); var c1 = el('td'); c1.appendChild(el('b', '', w.wo)); tr.appendChild(c1);
+      tr.appendChild(el('td', '', w.line));
+      var c3 = el('td'); c3.appendChild(el('div', '', w.partNo)); if (w.partNm) { c3.appendChild(el('div', 'small', w.partNm)); } tr.appendChild(c3);
+      tr.appendChild(el('td', '', fmt(w.plan)));
+      var c5 = el('td'); c5.appendChild(el('span', 'tag ' + (w.complete ? 'ok' : 'part'), w.complete ? 'LENGKAP' : 'SEBAGIAN')); tr.appendChild(c5);
+      t.appendChild(tr);
+    });
+    if (d.status === 'OUT') { $('btnIn').disabled = false; $('btnIn').focus(); }
+    else { say('Troli ' + d.code + ' sudah berstatus ' + d.status + (d.inDt ? ' (diterima ' + d.inDt + ' oleh ' + d.inBy + ')' : '') + ', tidak dapat diterima lagi.', false); }
+  }
+  function doTrolley() {
+    var code = $('trolley').value.trim(); if (!code) { return; }
+    clearMsg();
+    if (MODE === 'out') { $('outBox').style.display = 'block'; loadWos(); $('woscan').focus(); return; }
+    req('GET', '../api/trolley.php?trolley=' + encodeURIComponent(code), null, function (st, data) {
+      if (st !== 200 || data.error) { say(errText(data), false); return; }
+      showLookup(data);
+    });
+  }
+  $('trolley').addEventListener('keydown', function (e) { if (e.key === 'Enter') { doTrolley(); } });
+  $('btnIn').addEventListener('click', function () {
+    if (needUser()) { return; }
+    var user = $('user').value.trim();
+    if (!lookedUp || !lookedUp.found) { return; }
+    $('btnIn').disabled = true;
+    req('POST', '../api/trolley.php', 'action=in&trolley=' + encodeURIComponent(lookedUp.slip) + '&user=' + encodeURIComponent(user), function (st, data) {
+      if (st !== 200 || data.error) { say(errText(data), false); $('btnIn').disabled = false; return; }
+      say(data.message, true); $('inBox').style.display = 'none'; $('trolley').value = ''; $('trolley').focus(); lookedUp = null; loadOpen();
+    });
+  });
+
+  if (MODE === 'out') { $('outBox').style.display = 'block'; loadWos(); }
+  loadOpen();
+  if (MODE === 'out') { $('woscan').focus(); } else { $('trolley').focus(); }
+})();
+</script>
+</body>
+</html>

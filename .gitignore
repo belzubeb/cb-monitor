@@ -1,0 +1,4 @@
+config/settings.local.php
+storage/*
+!storage/.gitkeep
+!storage/.htaccess

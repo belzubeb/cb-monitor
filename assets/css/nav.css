@@ -1,0 +1,45 @@
+/* Sidebar navigasi (dimuat otomatis oleh nav.js). Berdiri sendiri: tidak bergantung pada cb.css,
+   jadi bisa dipakai juga di halaman yang bertema terang (supply.html, setup.php). */
+body.has-nav { padding-left: 240px !important; }
+/* Pesan besar (toast hijau/merah) dimulai setelah sidebar supaya tidak tertutup */
+body.has-nav .toast { left: 240px; }
+
+.cbnav { position: fixed; z-index: 30; top: 0; bottom: 0; left: 0; width: 240px; overflow-y: auto;
+  background: #111; color: #fff; border-right: 1px solid #333; font-family: Arial, Helvetica, sans-serif; font-size: 15px; line-height: 1.35; }
+.cbnav * { box-sizing: border-box; }
+.cbnav .brand { display: block; padding: 16px 16px 14px; border-bottom: 1px solid #333; color: #fff; text-decoration: none; }
+.cbnav .brand b { display: block; font-size: 18px; }
+.cbnav .brand span { display: block; margin-top: 2px; font-size: 12px; color: #aaa; }
+.cbnav h2 { margin: 16px 16px 4px; font-size: 11px; font-weight: bold; letter-spacing: .08em; text-transform: uppercase; color: #888; }
+.cbnav ul { list-style: none; margin: 0; padding: 0; }
+.cbnav a.item { display: flex; align-items: center; gap: 10px; padding: 9px 16px; color: #ddd; text-decoration: none; border-left: 4px solid transparent; }
+.cbnav a.item:hover { background: #1d1d1d; color: #fff; }
+.cbnav a.item[aria-current="page"] { background: #222; color: #fff; font-weight: bold; border-left-color: var(--navc, #ffff00); }
+.cbnav a.item .dot { flex: 0 0 10px; height: 10px; background: var(--navc, #666); }
+.cbnav a.item .ext { margin-left: auto; color: #777; font-size: 13px; }
+.cbnav a:focus-visible, .cbnav summary:focus-visible, .cbnav-top button:focus-visible { outline: 3px solid #ffff00; outline-offset: -3px; }
+.cbnav details { margin-top: 12px; border-top: 1px solid #333; padding-top: 4px; }
+.cbnav summary { cursor: pointer; list-style: none; margin: 8px 16px 4px; font-size: 11px; font-weight: bold; letter-spacing: .08em; text-transform: uppercase; color: #888; }
+.cbnav summary::-webkit-details-marker { display: none; }
+.cbnav summary::before { content: "\25B8  "; }
+.cbnav details[open] summary::before { content: "\25BE  "; }
+
+.cbnav-top, .cbnav-ov { display: none; }
+
+@media (max-width: 899px) {
+  body.has-nav { padding-left: 0 !important; padding-top: 52px !important; }
+  body.has-nav .toast { left: 0; top: 52px; }
+  .cbnav-top { display: flex; align-items: center; gap: 12px; position: fixed; z-index: 25; top: 0; left: 0; right: 0; height: 52px; padding: 0 12px;
+    background: #111; border-bottom: 1px solid #333; color: #fff; font-family: Arial, Helvetica, sans-serif; }
+  .cbnav-top button { font: inherit; font-size: 15px; padding: 8px 14px; background: #222; color: #fff; border: 1px solid #666; cursor: pointer; }
+  .cbnav-top b { font-size: 16px; }
+  .cbnav { transform: translateX(-100%); transition: transform .15s; width: 270px; max-width: 85vw; }
+  .cbnav.open { transform: none; }
+  .cbnav-ov.open { display: block; position: fixed; z-index: 29; inset: 0; background: rgba(0, 0, 0, .6); }
+}
+@media (prefers-reduced-motion: reduce) { .cbnav { transition: none; } }
+
+@media print {
+  .cbnav, .cbnav-top, .cbnav-ov { display: none !important; }
+  body.has-nav { padding: 0 !important; }
+}

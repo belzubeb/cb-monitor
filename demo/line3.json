@@ -1,0 +1,50 @@
+{
+ "generated": "2026-10-14 10:05:00",
+ "date": "2026-10-14",
+ "line": "LINE 3",
+ "prodSource": "erp",
+ "rows": [
+  {
+   "id": 67569,
+   "prodNo": "0003",
+   "wo": "MO26101400003",
+   "lotNo": "P26A1400004",
+   "partNo": "LC50200040B",
+   "partNm": "50NU",
+   "ledLot": "V32BD2211",
+   "lotQty": 600,
+   "cQty": 3,
+   "cStatus": 0,
+   "isNext": 0,
+   "scanIn": 144,
+   "scanLed": 75,
+   "scanOut": 117,
+   "prodtm": 1233,
+   "woFound": true,
+   "plan": 100,
+   "prodErp": 123,
+   "closeYn": "N"
+  },
+  {
+   "id": 67570,
+   "prodNo": "0004",
+   "wo": "MO26101400004",
+   "lotNo": "P26A1400005",
+   "partNo": "LC50200039E",
+   "partNm": "ASSY COVER BOTTOM (50NU)",
+   "ledLot": "VQ2A11122",
+   "lotQty": 8000,
+   "cQty": 3,
+   "cStatus": 1,
+   "isNext": 0,
+   "scanIn": 734,
+   "scanLed": 688,
+   "scanOut": 699,
+   "prodtm": 6871,
+   "woFound": true,
+   "plan": 2000,
+   "prodErp": 700,
+   "closeYn": "N"
+  }
+ ]
+}

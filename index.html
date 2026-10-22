@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Supply List Monitoring - Cover Bottom</title>
+<link rel="stylesheet" href="assets/css/cb.css">
+<script src="assets/js/nav.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <h1>Supply List Cover Bottom</h1>
+    <p>Silakan pilih sesuai tugas Anda</p>
+  </div>
+
+  <section class="group">
+    <h2>Tampilkan monitor di TV</h2>
+    <p>Buka di TV line, kemudian tekan F11 untuk layar penuh.</p>
+    <div class="tiles">
+      <a class="tile" href="pages/monitor.html?line=2"><span class="chip c-running">Line 2</span><span class="body"><b>Monitor Line 2</b><span>Finish, running, next, dan planning</span></span></a>
+      <a class="tile" href="pages/monitor.html?line=3"><span class="chip c-running">Line 3</span><span class="body"><b>Monitor Line 3</b><span>Finish, running, next, dan planning</span></span></a>
+    </div>
+  </section>
+
+  <section class="group">
+    <h2>Kirim dan terima troli</h2>
+    <p>Gudang kirim troli dengan Scan OUT, produksi terima di line dengan Scan IN.</p>
+    <div class="tiles">
+      <a class="tile" href="pages/scan.html?mode=out"><span class="chip c-prepared">OUT</span><span class="body"><b>Kirim troli (gudang)</b><span>Scan WO yang ada di troli, lalu kirim</span></span></a>
+      <a class="tile" href="pages/scan.html?mode=in"><span class="chip c-fullkit">IN</span><span class="body"><b>Terima troli (line)</b><span>Scan slip troli yang sampai di line</span></span></a>
+    </div>
+  </section>
+
+  <section class="group">
+    <h2>Siapkan supply list</h2>
+    <p>Untuk leader: lihat WO hari ini, buat atau batalkan supply list, lalu cetak.</p>
+    <div class="tiles">
+      <a class="tile" href="pages/planning.html"><span class="chip c-next">WO</span><span class="body"><b>Planning hari ini</b><span>Status supply list per WO, buat manual, sinkron</span></span></a>
+      <a class="tile" href="pages/supply.html?line=2"><span class="chip c-finish">Cetak</span><span class="body"><b>Supply list Line 2</b><span>Isi troli per WO, siap dicetak</span></span></a>
+      <a class="tile" href="pages/supply.html?line=3"><span class="chip c-finish">Cetak</span><span class="body"><b>Supply list Line 3</b><span>Isi troli per WO, siap dicetak</span></span></a>
+    </div>
+  </section>
+
+  <details class="more">
+    <summary>Pengembangan dan uji coba</summary>
+    <div class="tiles">
+      <a class="tile" href="admin/setup.php"><span class="body"><b>Pengaturan sambungan data</b><span>Untuk pengembang. Hanya dapat dibuka dari PC server ini.</span></span></a>
+      <button class="tile" id="btnCheck" type="button"><span class="body"><b>Uji sambungan sistem</b><span>Untuk pengembang. Hasil pengujian tampil di bawah.</span></span></button>
+      <a class="tile" href="pages/monitor.html?line=2&amp;debug=1"><span class="body"><b>Monitor mode debug</b><span>Untuk pengembang. Menampilkan nilai mentah (Line 2).</span></span></a>
+      <a class="tile" href="pages/monitor.html?line=2&amp;mock=1"><span class="body"><b>Demo monitor</b><span>Data contoh, bukan data produksi.</span></span></a>
+      <a class="tile" href="pages/supply.html?line=2&amp;mock=1"><span class="body"><b>Demo supply list</b><span>Data contoh, bukan data produksi.</span></span></a>
+    </div>
+    <div id="checkout" class="result"></div>
+  </details>
+</div>
+
+<script>
+(function () {
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) { e.className = cls; }
+    if (text !== undefined && text !== null) { e.textContent = text; }
+    return e;
+  }
+  var out = document.getElementById('checkout');
+
+  function show(msg, cls) {
+    out.style.display = 'block';
+    out.textContent = '';
+    out.appendChild(el('div', cls, msg));
+  }
+
+  document.getElementById('btnCheck').addEventListener('click', function () {
+    show('Menguji koneksi...', '');
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', 'api/monitor.php?check=1', true);
+    xhr.onreadystatechange = function () {
+      if (xhr.readyState !== 4) { return; }
+      try {
+        var data = JSON.parse(xhr.responseText);
+        var t = el('table');
+        Object.keys(data).forEach(function (k) {
+          var r = data[k];
+          var tr = el('tr');
+          tr.appendChild(el('td', '', k));
+          tr.appendChild(el('td', r.ok ? 'ok' : 'bad', r.ok ? 'OK' : 'GAGAL'));
+          tr.appendChild(el('td', '', r.ok ? r.info : r.error));
+          t.appendChild(tr);
+        });
+        out.textContent = '';
+        out.appendChild(t);
+      } catch (e) {
+        show('Pengujian gagal. Server tidak memberikan respons yang valid (kode ' + xhr.status + '). Pastikan layanan server berjalan.', 'bad');
+      }
+    };
+    xhr.send();
+  });
+})();
+</script>
+</body>
+</html>
