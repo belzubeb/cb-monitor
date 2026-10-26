@@ -42,7 +42,29 @@
   .raw-NOLIST { background: #ff0000; color: #fff; } .raw-CANCEL { background: #777; color: #eee; }
   .c-FINISH { color: #fff; } .c-RUNNING { color: #00ff00; } .c-NEXT { color: #ffff00; }
 
-  #plan { flex: 1; min-height: 0; overflow: auto; border-top: 2px solid #333; margin-top: .3rem; }
+  #lower { flex: 1; min-height: 0; display: flex; border-top: 2px solid #333; margin-top: .3rem; }
+  #plan { flex: 1 1 0; min-width: 0; overflow: auto; }
+  #plan td, #plan th { white-space: nowrap; padding: .2rem .35rem; }
+  #plan table { font-size: 1.2rem; }
+  #bom { flex: 0 0 34%; min-width: 0; overflow: auto; border-left: 2px solid #333; }
+  #bom .bhd { display: flex; align-items: center; gap: .6rem; padding: .25rem .6rem; background: #111;
+              position: sticky; top: 0; z-index: 2; font-size: 1.05rem; color: #ddd; flex-wrap: wrap; }
+  #bom .bhd b { color: #fff; }
+  #bom .bhd .sp { flex: 1; }
+  #bom table { font-size: .98rem; }
+  #bom td, #bom th { padding: .12rem .35rem; }
+  #bom .bsrc { font-size: .9rem; padding: .05rem .5rem; border-radius: .3rem; background: #333; color: #ffd24d; }
+  #bom button { background: #333; color: #fff; border: 1px solid #555; border-radius: .3rem;
+                font-size: 1.1rem; padding: .02rem .5rem; cursor: pointer; }
+  #bom .hint { padding: 1rem .8rem; color: #777; font-size: 1.1rem; }
+  #bom th { top: 2.1rem; }
+  #bom td.n { font-size: 1.1rem; font-weight: bold; color: #ffd24d; }
+  .pick { cursor: pointer; user-select: none; -webkit-user-select: none; }
+  tr.sel td { outline: 2px solid #00bfff; outline-offset: -2px; }
+  .brow.sel { outline: 2px solid #00bfff; outline-offset: -2px; }
+  #fs { background: #2a2a2a; color: #ddd; border: 1px solid #555; border-radius: .3rem; font-size: 1.1rem;
+        padding: .05rem .7rem; cursor: pointer; margin-left: 1rem; }
+  #fs:hover { background: #444; color: #fff; }
   #plan .ptitle { padding: .3rem .8rem; font-size: 1.6rem; color: #ddd; }
   table { width: 100%; border-collapse: collapse; font-size: 1.35rem; }
   th { background: #222; color: #ccc; text-align: left; padding: .25rem .5rem; position: sticky; top: 0; }
@@ -83,8 +105,9 @@
 </div>
 <div id="board"></div>
 
+<div id="lower">
 <div id="plan">
-  <div class="ptitle" id="ptitle">PLANNING</div>
+  <div class="ptitle" id="ptitle">PLANNING <span style="color:#777">(klik 2x baris untuk lihat BOM)</span></div>
   <table>
     <thead><tr>
       <th>No</th><th>ProdNo</th><th>Part No</th><th>Work Order</th><th>Lot No</th><th>LED Lot</th>
@@ -93,12 +116,14 @@
     <tbody id="ptable"></tbody>
   </table>
 </div>
+<div id="bom"><div class="hint">Klik 2x salah satu baris WO / part untuk menampilkan BOM dan kebutuhannya di sini.</div></div>
+</div>
 
 <pre id="debug"></pre>
 <footer>
   <span><a id="home" href="../index.html">&larr; Beranda</a><span id="foot">Memuat data...</span></span>
   <span id="err"></span>
-  <span id="cdown"></span>
+  <span><span id="cdown"></span><button id="fs" type="button" title="Layar penuh (sama seperti F11)">&#x26F6; Layar penuh</button></span>
 </footer>
 
 <script>
@@ -109,6 +134,9 @@
   var DEBUG = qs.has('debug');
   var MOCK = qs.has('mock');
   var REFRESH = 60;
+  // Hard refresh (muat ulang seluruh halaman) tiap 180 detik. Ubah dengan ?hard=detik, ?hard=0 untuk mematikan.
+  var HARD = qs.has('hard') ? Number(qs.get('hard')) || 0 : 180;
+  var sinceHard = 0;
   var remaining = REFRESH;
   var lastData = null;
 
@@ -119,6 +147,7 @@
     return e;
   }
   function fmt(n) { return Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 }); }
+  function fmtB(n) { return Number(n).toLocaleString('en-US', { maximumFractionDigits: 5 }); }
   function pad(n) { return (n < 10 ? '0' : '') + n; }
 
   // ---------------- Aturan status (usulan, perlu dikonfirmasi tim) ----------------
@@ -182,7 +211,8 @@
   }
 
   function boardRow(kind, r) {
-    var row = el('div', 'grid7 brow');
+    var row = el('div', 'grid7 brow' + (r ? ' pick' : '') + (r && r.wo === selWo ? ' sel' : ''));
+    if (r) { row.addEventListener('dblclick', function () { selectWo(r); }); }
     var c1 = el('div');
     c1.appendChild(el('div', 'chip st-' + kind, kind));
     row.appendChild(c1);
@@ -229,7 +259,8 @@
     var tb = document.getElementById('ptable');
     tb.textContent = '';
     p.rows.forEach(function (r, i) {
-      var tr = el('tr', 'row-' + r.status);
+      var tr = el('tr', 'row-' + r.status + ' pick' + (r.wo === selWo ? ' sel' : ''));
+      tr.addEventListener('dblclick', function () { selectWo(r); });
       var cells = [
         [String(i + 1), ''], [r.prodNo, ''], [r.partNo, ''], [r.wo, ''], [r.lotNo, ''], [r.ledLot, ''],
         [fmt(r.plan), 'r'], [fmt(r.prod), 'r'], [r.ach + ' %', 'r'], [r.status, ''],
@@ -254,6 +285,127 @@
     }
   }
 
+  // ---------------- Panel BOM (kanan bawah) ----------------
+  var selWo = '';
+  var selRow = null;
+
+  function closeBom() {
+    selWo = ''; selRow = null;
+    var box = document.getElementById('bom');
+    box.textContent = '';
+    box.appendChild(el('div', 'hint', 'Klik 2x salah satu baris WO / part untuk menampilkan BOM dan kebutuhannya di sini.'));
+    if (lastData) { render(lastData); }
+  }
+
+  function renderBom(d) {
+    var box = document.getElementById('bom');
+    box.textContent = '';
+    var h = el('div', 'bhd');
+    h.appendChild(el('b', null, d.wo));
+    h.appendChild(el('span', null, d.partNo + (d.partNm ? ' ' + d.partNm : '')));
+    h.appendChild(el('span', null, 'Plan ' + fmt(d.plan)));
+    h.appendChild(el('span', 'bsrc', d.source + (d.status ? ' ' + d.status : '')));
+    h.appendChild(el('span', 'sp'));
+    var x = el('button', null, '\u2715'); x.type = 'button'; x.title = 'Tutup';
+    x.addEventListener('click', closeBom);
+    h.appendChild(x);
+    box.appendChild(h);
+
+    if (!d.items.length) {
+      box.appendChild(el('div', 'hint', 'BOM tidak ditemukan untuk part ' + d.partNo + (d.bomDate ? ' pada tanggal ' + d.bomDate : '') + '.'));
+      return;
+    }
+    var t = el('table');
+    var thead = el('thead'), hr = el('tr');
+    [['No', ''], ['Child Part', ''], ['Nama', ''], ['Usage', 'r'], ['Need', 'r'], ['Unit', '']].forEach(function (c) {
+      hr.appendChild(el('th', c[1], c[0]));
+    });
+    thead.appendChild(hr); t.appendChild(thead);
+    var tb = el('tbody');
+    d.items.forEach(function (it, i) {
+      var tr = el('tr');
+      [[String(i + 1), ''], [it.partNo, ''], [it.partNm, ''], [fmtB(it.usage), 'r'], [fmtB(it.need), 'r n'], [it.unit, '']].forEach(function (c) {
+        var cls = c[1] === 'r n' ? 'r n' : c[1];
+        tr.appendChild(el('td', cls, c[0]));
+      });
+      tb.appendChild(tr);
+    });
+    t.appendChild(tb);
+    box.appendChild(t);
+  }
+
+  function bomMessage(text) {
+    var box = document.getElementById('bom');
+    box.textContent = '';
+    box.appendChild(el('div', 'hint', text));
+  }
+
+  function loadBom() {
+    if (!selWo) { return; }
+    var wo = selWo;
+    if (MOCK) {
+      // Mode demo: ambil dari demo/supplyN.json
+      var xm = new XMLHttpRequest();
+      xm.open('GET', '../demo/supply' + encodeURIComponent(LINE) + '.json', true);
+      xm.onreadystatechange = function () {
+        if (xm.readyState !== 4 || wo !== selWo) { return; }
+        try {
+          var dm = JSON.parse(xm.responseText);
+          var hit = null;
+          dm.items.forEach(function (w) { if (w.wo === wo) { hit = w; } });
+          if (!hit) { bomMessage('Data demo BOM untuk ' + wo + ' tidak tersedia.'); return; }
+          renderBom({ wo: hit.wo, partNo: hit.partNo, partNm: hit.partNm, plan: hit.plan, bomDate: hit.bomDate,
+                      source: 'DEMO', status: '', items: hit.items });
+        } catch (e) { bomMessage('Data demo BOM tidak dapat dimuat.'); }
+      };
+      xm.send();
+      return;
+    }
+    var x = new XMLHttpRequest();
+    x.open('GET', '../api/bom.php?wo=' + encodeURIComponent(wo), true);
+    x.onreadystatechange = function () {
+      if (x.readyState !== 4 || wo !== selWo) { return; }
+      try {
+        var d = JSON.parse(x.responseText);
+        if (x.status !== 200 || d.error) {
+          throw new Error((d && d.error ? d.error : 'HTTP ' + x.status) + (d && d.detail ? ': ' + d.detail : ''));
+        }
+        renderBom(d);
+      } catch (e) {
+        bomMessage('BOM belum dapat dimuat.' + (DEBUG ? ' [' + e.message + ']' : ''));
+      }
+    };
+    x.send();
+  }
+
+  function selectWo(r) {
+    selWo = r.wo; selRow = r;
+    bomMessage('Memuat BOM ' + r.wo + '...');
+    if (lastData) { render(lastData); }
+    loadBom();
+  }
+
+  // ---------------- Tombol layar penuh (pengganti F11) ----------------
+  function fsElement() { return document.fullscreenElement || document.webkitFullscreenElement || null; }
+  function fsToggle() {
+    var de = document.documentElement;
+    if (fsElement()) {
+      (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    } else {
+      var f = de.requestFullscreen || de.webkitRequestFullscreen;
+      if (f) { f.call(de); }
+    }
+  }
+  function fsLabel() {
+    document.getElementById('fs').textContent = fsElement() ? '\u2715 Keluar layar penuh' : '\u26F6 Layar penuh';
+  }
+  document.getElementById('fs').addEventListener('click', fsToggle);
+  document.addEventListener('fullscreenchange', fsLabel);
+  document.addEventListener('webkitfullscreenchange', fsLabel);
+  if (!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen)) {
+    document.getElementById('fs').style.display = 'none';
+  }
+
   function load() {
     var url = MOCK ? '../demo/line' + encodeURIComponent(LINE) + '.json'
                    : '../api/monitor.php?line=' + encodeURIComponent(LINE) + (DATE ? '&date=' + encodeURIComponent(DATE) : '');
@@ -270,6 +422,7 @@
         lastData = data;
         render(data);
         err.textContent = '';
+        if (selWo) { loadBom(); }
       } catch (e) {
         err.textContent = (lastData ? 'Data belum dapat diperbarui, menampilkan data terakhir.' : 'Data belum dapat dimuat.')
           + (DEBUG ? ' [' + e.message + ']' : '');
@@ -283,6 +436,12 @@
     var n = new Date();
     document.getElementById('cd').textContent = n.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
     document.getElementById('ct').textContent = pad(n.getHours()) + ':' + pad(n.getMinutes()) + ':' + pad(n.getSeconds());
+    sinceHard += 1;
+    if (HARD > 0 && sinceHard >= HARD && !MOCK) {
+      try { sessionStorage.setItem('cbSelWo', selWo || ''); } catch (e) {}
+      location.reload();
+      return;
+    }
     remaining -= 1;
     document.getElementById('cdown').textContent = 'Diperbarui dalam ' + Math.max(remaining, 0) + ' detik';
     if (remaining <= 0) { remaining = REFRESH; load(); }
@@ -290,6 +449,8 @@
 
   if (MOCK) { document.getElementById('demo').style.display = 'block'; }
   document.getElementById('linebadge').textContent = 'COVER BOTTOM - LINE ' + LINE;
+  try { selWo = sessionStorage.getItem('cbSelWo') || ''; sessionStorage.removeItem('cbSelWo'); } catch (e) {}
+  if (selWo) { bomMessage('Memuat BOM ' + selWo + '...'); loadBom(); }
   load();
   tick();
   setInterval(tick, 1000);
