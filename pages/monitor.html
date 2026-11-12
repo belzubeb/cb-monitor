@@ -406,6 +406,30 @@
     document.getElementById('fs').style.display = 'none';
   }
 
+  // Cek apakah monitor.html di server berubah dibanding saat halaman dimuat.
+  var pageSig = null;
+  function fetchPageSig(cb) {
+    var x = new XMLHttpRequest();
+    var u = location.pathname + '?_=' + Date.now();
+    x.open('GET', u, true);
+    x.setRequestHeader('Cache-Control', 'no-cache');
+    x.onreadystatechange = function () {
+      if (x.readyState !== 4) { return; }
+      if (x.status === 200) { cb(x.responseText.length + ':' + x.responseText.replace(/\s+/g, '').length); }
+    };
+    x.send();
+  }
+  function checkPageUpdate() {
+    fetchPageSig(function (sig) {
+      if (pageSig === null) { pageSig = sig; return; }
+      if (sig !== pageSig) {
+        try { sessionStorage.setItem('cbSelWo', selWo || ''); } catch (e) {}
+        location.reload();
+      }
+    });
+  }
+  if (!MOCK) { fetchPageSig(function (sig) { if (pageSig === null) { pageSig = sig; } }); }
+
   function load() {
     var url = MOCK ? '../demo/line' + encodeURIComponent(LINE) + '.json'
                    : '../api/monitor.php?line=' + encodeURIComponent(LINE) + (DATE ? '&date=' + encodeURIComponent(DATE) : '');
@@ -438,9 +462,16 @@
     document.getElementById('ct').textContent = pad(n.getHours()) + ':' + pad(n.getMinutes()) + ':' + pad(n.getSeconds());
     sinceHard += 1;
     if (HARD > 0 && sinceHard >= HARD && !MOCK) {
-      try { sessionStorage.setItem('cbSelWo', selWo || ''); } catch (e) {}
-      location.reload();
-      return;
+      sinceHard = 0;
+      if (!fsElement()) {
+        // Tidak fullscreen: reload penuh seperti biasa.
+        try { sessionStorage.setItem('cbSelWo', selWo || ''); } catch (e) {}
+        location.reload();
+        return;
+      }
+      // Sedang fullscreen (tombol): reload akan mengeluarkan layar penuh, jadi hanya reload
+      // kalau file halaman di server berubah (ada versi baru).
+      checkPageUpdate();
     }
     remaining -= 1;
     document.getElementById('cdown').textContent = 'Diperbarui dalam ' + Math.max(remaining, 0) + ' detik';
